@@ -268,6 +268,10 @@ let s:gb.purple = s:purple
 let s:gb.aqua   = s:aqua
 let s:gb.orange = s:orange
 
+if !exists('g:gruvbox_auto_set_term_color')
+  let g:gruvbox_auto_set_term_color=0
+endif
+
 " }}}
 
 " Overload Setting: {{{
@@ -1233,6 +1237,93 @@ endfunction
 function! GruvboxHlsHideCursor()
   call s:HL('Cursor', s:none, s:none, s:inverse)
 endfunction
+
+" 色彩来自gruvbox_256palette.sh
+let s:term_colors = [
+      \'4;236;rgb:32/30/2f',
+      \'4;234;rgb:1d/20/21',
+      \'4;235;rgb:28/28/28',
+      \'4;237;rgb:3c/38/36',
+      \'4;239;rgb:50/49/45',
+      \'4;241;rgb:66/5c/54',
+      \'4;243;rgb:7c/6f/64',
+      \'4;244;rgb:92/83/74',
+      \'4;245;rgb:92/83/74',
+      \'4;228;rgb:f2/e5/bc',
+      \'4;230;rgb:f9/f5/d7',
+      \'4;229;rgb:fb/f1/c7',
+      \'4;223;rgb:eb/db/b2',
+      \'4;250;rgb:d5/c4/a1',
+      \'4;248;rgb:bd/ae/93',
+      \'4;246;rgb:a8/99/84',
+      \'4;167;rgb:fb/49/34',
+      \'4;142;rgb:b8/bb/26',
+      \'4;214;rgb:fa/bd/2f',
+      \'4;109;rgb:83/a5/98',
+      \'4;175;rgb:d3/86/9b',
+      \'4;108;rgb:8e/c0/7c',
+      \'4;208;rgb:fe/80/19',
+      \'4;88;rgb:9d/00/06',
+      \'4;100;rgb:79/74/0e',
+      \'4;136;rgb:b5/76/14',
+      \'4;24;rgb:07/66/78',
+      \'4;96;rgb:8f/3f/71',
+      \'4;66;rgb:42/7b/58',
+      \'4;130;rgb:af/3a/03'
+      \]
+
+" 用printf，虽然echo可以一次串联多个句子，但是会导致多出一串的空格被输出,
+" 通过ColorScheme触发或直接调用会导致vim退出后，看到的提示符位置不对。
+" 用echo就需要使用exec ':redraw!' 而且必须通过VimEnter。
+"
+" 通过ColorScheme则使用printf，只因残留的字符处在不明显的位置。
+" 通过VimEnter则printf和echo都可以，但是必须要有':redraw!'，这个解决比较完美。
+function! GruvboxSetTermColor()
+  " 正如上面提到的，在vim启动阶段通过ColorScheme设置会有字符残留，留给后面
+  " 的VimEnter解决吧。ColorScheme主要是修复启动后从别颜色换回gruvbox的问题。
+  if has('gui_running') || has('nvim') || has('vim_starting')
+    return
+  endif
+
+  let cmd = 'silent !echo -ne'
+  "let cmd = 'silent !printf'
+  " xterm and others
+  let color_head = ' "\033]'
+  let color_tail = '\033\\"'
+  if exists('$TMUX')
+    let color_head = ' "\033Ptmux;\033\033]'
+    let color_tail = '\007\033\\"'
+  elseif &term =~ 'screen'
+    let color_head = ' "\033P\033]'
+    let color_tail = '\007\033\\"'
+  endif
+  "for color in s:term_colors
+  "exec 'silent !echo -ne "\033]'.color.'\033\\"'
+  "endfor
+  "let cmd .= color_head.s:term_colors[0].color_tail
+  "for color in s:term_colors[1:]
+    "let cmd .= ' && printf'.color_head.color.color_tail
+  "endfor
+  for color in s:term_colors
+    let cmd .= color_head.color.color_tail
+  endfor
+  exe cmd
+  " 刷新解决可能的残留字符串, 但是不能在启动过程中使用，比如说ColorScheme
+  " tmux下没有这问题，但是gnome-terminal等就需要了。
+  redraw!
+endfunction
+
+" vim的启动可能会慢一点
+if g:gruvbox_auto_set_term_color == 1
+  " 直接调用和ColorScheme结果一样，运行到这里大概也是设置colorscheme的时候了
+  " 不过不能使用:redraw!，否则会出现问题。比如退出vim的时候还留下大片痕迹。
+  "call GruvboxSetTermColor()
+  augroup gruvbox_set_term_color
+    au!
+    au ColorScheme * call GruvboxSetTermColor()
+    au VimEnter * call GruvboxSetTermColor()
+  augroup END
+endif
 
 " }}}
 
