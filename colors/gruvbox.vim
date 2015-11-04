@@ -1310,7 +1310,9 @@ function! GruvboxSetTermColor()
   exe cmd
   " 刷新解决可能的残留字符串, 但是不能在启动过程中使用，比如说ColorScheme
   " tmux下没有这问题，但是gnome-terminal等就需要了。
-  redraw!
+  " 更新：注意：在VimEnter内使用redraw!可能会出现一些问题。比如说稍后运行的函
+  " 数内的部分变量被清空？这可能是vim的bug吧。
+  " redraw!
 endfunction
 
 " vim的启动可能会慢一点
@@ -1322,6 +1324,9 @@ if g:gruvbox_auto_set_term_color == 1
     au!
     au ColorScheme * call GruvboxSetTermColor()
     au VimEnter * call GruvboxSetTermColor()
+    " VimEnter后vim会触发CursorMoved事件，在此期间使用redraw!同样能达到清理残
+    " 留字符的效果，但不会有在VimEnter期间使用redraw!可能出现的问题。
+    au CursorMoved * redraw! | au! gruvbox_set_term_color CursorMoved
   augroup END
 endif
 
